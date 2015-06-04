@@ -10,9 +10,11 @@ angular.module('pieChartApp')
   .directive('pieChart', [
     '$d3',
     '$timeout',
+    '$window',
     function (
       $d3,
-      $timeout
+      $timeout,
+      $window
     ) {
       return {
         template: function( ) {
@@ -25,6 +27,10 @@ angular.module('pieChartApp')
           onClick: '&'
         },
         link: function postLink(scope, element/*, attrs*/) {
+          var defaultOptions = {
+            padding: 5,
+            iRadius: 0
+          };
 
           var
             // render promise, to not render unnecessary times
@@ -36,7 +42,20 @@ angular.module('pieChartApp')
             // current width to the svg element
             width,
 
-            svg = angular.element(element[0]).find('svg'),
+            // current radius to the svg element
+            oRadius,
+
+            colors = $d3.scale.category20(),
+
+            svg = $d3.select( element[0]).select('svg'),
+
+            g = svg.select('g'),
+
+            arc = $d3.svg.arc(),
+
+            pie = $d3.layout
+              .pie()
+              .value( function ( d ) { return d.count; }),
 
             tooltip = $d3
               .select('body')
@@ -49,6 +68,11 @@ angular.module('pieChartApp')
            * @param data
            */
           scope.render = function ( data ) {
+            g.selectAll('*').remove();
+            height = element[0].offsetHeight;
+            width = element[0].offsetWidth;
+            oRadius = Math.min(height, width) / 2 - scope.options.padding;
+            console.log('oRadius', oRadius);
 
             // if data if undefined or is not an array or is null or there are no objects inside
             // we cannot render the pie chart, so, we cancel the render.
@@ -72,6 +96,46 @@ angular.module('pieChartApp')
 
             renderPromise = $timeout(function ( ) {
 
+              g.attr('transform', 'translate(' + (width / 2) + ',' + (height / 2) + ')');
+
+              arc
+                .outerRadius( oRadius )
+                .innerRadius( oRadius * scope.options.iRadius );
+
+              // creating the pie chart example
+              g.datum(data).selectAll('path')
+                .data(pie)
+                .enter().append('path')
+                .attr('class','piechart')
+                .attr('fill', function(d,i){ return colors(i); })
+                .attr('d', arc)
+                .on('click', function(d) {
+
+                  if( angular.isFunction( scope.onClick ) ) {
+                    scope.onClick()(d.data);
+                  }
+
+                })
+                .on('mouseover', function ( d ) {
+                  tooltip
+                    .select('.tooltip-inner')
+                    .html(d.data.label);
+                  
+                  tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                  tooltip
+                    .style("left", (d3.event.pageX) + "px")
+                    .style("top", (d3.event.pageY - 28) + "px");
+                })
+                .on('mouseout', function ( d ) {
+                  tooltip
+                    .transition()
+                    .duration(500)
+                    .style('opacity', 0);
+                })
+                .each(function(d){ this._current = d; });
+
             }, 200);
 
           };
@@ -85,7 +149,26 @@ angular.module('pieChartApp')
             .append('div')
             .attr('class', 'tooltip-inner');
 
+          /* adding default options */
+          if( angular.isUndefined(scope.options) || !angular.isObject(scope.options) ) {
+            scope.options = {};
+          }
+
+          $window._.each(
+            defaultOptions, function ( option, key ) {
+              if( !$window._.has(scope.options, key) ) {
+                scope.options[key] = option;
+              }
+            }
+          );
+
+          /* adding a watcher to scope.data */
+          scope.$watch('data', function ( data ) {
+            scope.render(data);
+          });
+
           /**
+           * handle click event
            *
            * @param _item
            */
