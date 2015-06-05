@@ -29,12 +29,17 @@ angular.module('pieChartApp')
         link: function postLink(scope, element/*, attrs*/) {
           var defaultOptions = {
             padding: 5,
-            iRadius: 0
+            iRadius: 0,
+            label: 'label',
+            count: 'count'
           };
 
           var
             // render promise, to not render unnecessary times
             renderPromise,
+
+            // show the current tooltip
+            tooltipPromise,
 
             // current height to the svg element
             height,
@@ -53,9 +58,7 @@ angular.module('pieChartApp')
 
             arc = $d3.svg.arc(),
 
-            pie = $d3.layout
-              .pie()
-              .value( function ( d ) { return d.count; }),
+            pie,
 
             tooltip = $d3
               .select('body')
@@ -72,7 +75,6 @@ angular.module('pieChartApp')
             height = element[0].offsetHeight;
             width = element[0].offsetWidth;
             oRadius = Math.min(height, width) / 2 - scope.options.padding;
-            console.log('oRadius', oRadius);
 
             // if data if undefined or is not an array or is null or there are no objects inside
             // we cannot render the pie chart, so, we cancel the render.
@@ -116,23 +118,47 @@ angular.module('pieChartApp')
                   }
 
                 })
-                .on('mouseover', function ( d ) {
-                  tooltip
-                    .select('.tooltip-inner')
-                    .html(d.data.label);
-                  
-                  tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                  tooltip
-                    .style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY - 28) + "px");
+                .on('mousemove', function ( d ) {
+                  var
+                    x = $d3.event.pageX,
+                    y = $d3.event.pageY;
+
+                  if( tooltipPromise ) {
+                    $timeout.cancel(tooltipPromise);
+                  }
+
+                  tooltipPromise = $timeout(function ( ) {
+                    tooltip
+                      .select('.tooltip-inner')
+                      .html(d.data[scope.options.label]);
+
+                    tooltip.transition()
+                      .duration(200)
+                      .style("opacity", .9);
+
+                    tooltip
+                      .style("left", (x) + "px")
+                      .style("top", (y - 28) + "px");
+                  }, 100);
+
+
+
+
+
                 })
                 .on('mouseout', function ( d ) {
-                  tooltip
-                    .transition()
-                    .duration(500)
-                    .style('opacity', 0);
+
+                  if( tooltipPromise ) {
+                    $timeout.cancel(tooltipPromise);
+                  }
+
+                  tooltipPromise = $timeout(function ( ) {
+                    tooltip
+                      .transition()
+                      .duration(500)
+                      .style('opacity', 0);
+                  }, 100);
+
                 })
                 .each(function(d){ this._current = d; });
 
@@ -154,6 +180,11 @@ angular.module('pieChartApp')
             scope.options = {};
           }
 
+          /**
+           * The user could add some options, if some of them
+           * are not defined we add a default options to not
+           * return an error.
+           */
           $window._.each(
             defaultOptions, function ( option, key ) {
               if( !$window._.has(scope.options, key) ) {
@@ -161,6 +192,11 @@ angular.module('pieChartApp')
               }
             }
           );
+
+          /* adding the counter */
+          pie = $d3.layout
+            .pie()
+            .value( function ( d ) { return d[scope.options.count]; });
 
           /* adding a watcher to scope.data */
           scope.$watch('data', function ( data ) {
