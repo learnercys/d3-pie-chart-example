@@ -63,7 +63,7 @@ angular.module('pieChartApp')
             tooltip = $d3
               .select('body')
               .append('div')
-              .attr('class', 'tooltip right lc-tooltip');
+              .attr('class', 'tooltip right');
 
           /**
            * Render the pie chart with the current data
