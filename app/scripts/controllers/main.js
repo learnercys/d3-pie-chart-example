@@ -10,8 +10,10 @@
 angular.module('pieChartApp')
   .controller('MainCtrl', [
     '$scope',
+    '$location',
     function (
-      $scope
+      $scope,
+      $location
     ) {
       $scope.data= [
         {count:1, label:'label'},
@@ -26,6 +28,7 @@ angular.module('pieChartApp')
 
       $scope.click = function ( _item ) {
         console.log('_item', _item);
+        $location.path('about');
       };
     }
   ]);

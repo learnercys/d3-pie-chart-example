@@ -63,7 +63,7 @@ angular.module('pieChartApp')
             tooltip = $d3
               .select('body')
               .append('div')
-              .attr('class', 'tooltip right');
+              .attr('class', 'tooltip right lc-tooltip');
 
           /**
            * Render the pie chart with the current data
@@ -88,6 +88,10 @@ angular.module('pieChartApp')
               //
               // we cannot render the pie chart because
               // there is no area to show it.
+
+              // remove the tooltip in case it is necessary
+              tooltip
+                .style('opacity', 0);
               return;
             }
 
@@ -127,26 +131,24 @@ angular.module('pieChartApp')
                     $timeout.cancel(tooltipPromise);
                   }
 
+                  tooltip
+                    .style('left', (x) + 'px')
+                    .style('top', (y) + 'px');
+
+                  tooltip
+                    .select('.tooltip-inner')
+                    .html(d.data[scope.options.label]);
+
                   tooltipPromise = $timeout(function ( ) {
-                    tooltip
-                      .select('.tooltip-inner')
-                      .html(d.data[scope.options.label]);
 
                     tooltip.transition()
                       .duration(200)
-                      .style("opacity", .9);
+                      .style('opacity', .9);
 
-                    tooltip
-                      .style("left", (x) + "px")
-                      .style("top", (y - 28) + "px");
                   }, 100);
 
-
-
-
-
                 })
-                .on('mouseout', function ( d ) {
+                .on('mouseout', function ( /*d*/ ) {
 
                   if( tooltipPromise ) {
                     $timeout.cancel(tooltipPromise);
@@ -167,6 +169,9 @@ angular.module('pieChartApp')
           };
 
           /* tooltip attributes and elements */
+          tooltip
+            .style('pointer-events', 'none');
+
           tooltip
             .append('div')
             .attr('class', 'tooltip-arrow');
